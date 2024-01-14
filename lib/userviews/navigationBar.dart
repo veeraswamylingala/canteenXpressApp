@@ -16,7 +16,7 @@ class _NavigationBarPageState extends State<NavigationBarPage> {
   final List<Widget> _children = [
     const ProfilePage(),
     const HomePage(),
-    const CartPage(),
+    CartPage(),
   ];
   @override
   Widget build(BuildContext context) {

@@ -1,10 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:online_food_order_app/apis/foodAPIs.dart';
 import 'package:online_food_order_app/models/user.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
-import 'package:provider/provider.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -19,11 +20,10 @@ class _SignupPageState extends State<SignupPage> {
 
   final UserModel _user = UserModel();
   bool isSignedIn = false, showPassword = true, showConfirmPassword = true;
+  AuthNotifier authNotifier = Get.put(AuthNotifier());
 
   @override
   void initState() {
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
     initializeCurrentUser(authNotifier, context);
     super.initState();
   }
@@ -44,8 +44,7 @@ class _SignupPageState extends State<SignupPage> {
     _formkey.currentState!.save();
     RegExp regExp =
         RegExp(r'^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$');
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
+
     if (_user.displayName!.length < 3) {
       toast("Name must have atleast 3 characters");
     } else if (!regExp.hasMatch(_user.email ?? "")) {
@@ -60,10 +59,10 @@ class _SignupPageState extends State<SignupPage> {
       toast("Confirm password does'nt match your password");
     } else {
       print("Success");
-      _user.role = "user";
+      _user.role = "admin";
       _user.balance = 0.0;
 
-      ///   signUp(_user, authNotifier, context);C
+         signUp(_user, authNotifier, context);
     }
   }
 

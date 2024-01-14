@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:online_food_order_app/apis/foodAPIs.dart';
 import 'package:online_food_order_app/models/food.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
-import 'package:online_food_order_app/screens/login.dart';
 import 'package:online_food_order_app/widgets/customRaisedButton.dart';
-import 'package:provider/provider.dart';
+import '../notifiers/cartNotifier.dart';
+import '../userviews/loginScreen.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -17,27 +19,23 @@ class AdminHomePage extends StatefulWidget {
 class _AdminHomePageState extends State<AdminHomePage> {
   final _formKey = GlobalKey<FormState>();
   final _formKeyEdit = GlobalKey<FormState>();
-  List<Food> _foodItems = [];
+  List<FoodModel> _foodItems = [];
   String name = '';
+  AuthNotifier authNotifier = Get.put(AuthNotifier());
+  CartNotifier cartNotifier = Get.put(CartNotifier());
 
   signOutUser() {
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
-    // signOut(authNotifier, context);
+    signOut(authNotifier, context);
   }
 
   @override
   void initState() {
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
-    getUserDetails(authNotifier);
+    getAdminDetails(authNotifier);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         title: const Text('CanteeXpress'),
@@ -48,7 +46,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
               color: Colors.white,
             ),
             onPressed: () {
-              // signOutUser();
+              signOutUser();
               Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (BuildContext context) {
                 return const LoginPage();
@@ -58,9 +56,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
         ],
       ),
       // ignore: unrelated_type_equality_checks
-      body: (authNotifier.userDetails == null)
+      body: (authNotifier.adminDetails == null)
           ? const Center(child: Text("No Items to display"))
-          : (authNotifier.userDetails!.role == 'admin')
+          : (authNotifier.adminDetails!.role == 'admin')
               ? adminHome(context)
               : Container(
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -83,71 +81,80 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 
   Widget adminHome(context) {
-    // AuthNotifier authNotifier = Provider.of<AuthNotifier>(context, listen: false);
     return SingleChildScrollView(
       physics: const ScrollPhysics(),
       child: Column(
         children: <Widget>[
-          Card(
-            child: TextField(
-              decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search), hintText: 'Search...'),
-              onChanged: (val) {
-                setState(() {
-                  name = val;
-                });
-              },
-            ),
-          ),
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('items').snapshots(),
+            stream:
+                FirebaseFirestore.instance.collection('menu_items').snapshots(),
             builder:
                 (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
               if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
                 _foodItems = [];
                 for (var item in snapshot.data!.docs) {
-                  _foodItems.add(Food(item.id, item['item_name'],
-                      item['total_qty'], item['price']));
+                  _foodItems.add(FoodModel(
+                      id: item['id'],
+                      name: item['name'],
+                      category: item['category'],
+                      price: double.parse(item['price'].toString()),
+                      image: item['image'],
+                      description: item['description'],
+                      quantity: item['quantity']));
                 }
-                List<Food> suggestionList = (name == '')
-                    ? _foodItems
-                    : _foodItems
-                        .where((element) => element.itemName
-                            .toLowerCase()
-                            .contains(name.toLowerCase()))
-                        .toList();
-                if (suggestionList.isNotEmpty) {
+                // List<Food> suggestionList = (name == '')
+                //     ? _foodItems
+                //     : _foodItems
+                //         .where((element) => element.itemName
+                //             .toLowerCase()
+                //             .contains(name.toLowerCase()))
+                //         .toList();
+                if (_foodItems.isNotEmpty) {
                   return Container(
                     margin: const EdgeInsets.only(top: 10.0),
                     child: ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: suggestionList.length,
+                        itemCount: _foodItems.length,
                         itemBuilder: (context, int i) {
-                          return ListTile(
-                            title: Text(suggestionList[i].itemName ?? ''),
-                            subtitle: Text(
-                                'cost: ${suggestionList[i].price.toString()}'),
-                            trailing: Text(
-                                'Total Quantity: ${suggestionList[i].totalQty.toString()}'),
-                            onLongPress: () {
-                              showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (BuildContext context) {
-                                    return popupDeleteOrEmpty(
-                                        context, suggestionList[i]);
-                                  });
-                            },
-                            onTap: () {
-                              showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (BuildContext context) {
-                                    return popupEditForm(
-                                        context, suggestionList[i]);
-                                  });
-                            },
+                          return Card(
+                            child: ListTile(
+                              leading: SizedBox(
+                                width: 50,
+                                child: Image.network(_foodItems[i].image,
+                                    fit: BoxFit.fitWidth, errorBuilder: (
+                                  context,
+                                  v,
+                                  c,
+                                ) {
+                                  return Icon(
+                                      Icons.emoji_food_beverage_rounded);
+                                }),
+                              ),
+                              title: Text(_foodItems[i].name ?? ''),
+                              subtitle: Text(
+                                  'cost: ${_foodItems[i].price.toString()}'),
+                              trailing:
+                                  Text('${_foodItems[i].category.toString()}'),
+                              onLongPress: () {
+                                // showDialog(
+                                //     context: context,
+                                //     barrierDismissible: false,
+                                //     builder: (BuildContext context) {
+                                //       return popupDeleteOrEmpty(
+                                //           context, suggestionList[i]);
+                                //     });
+                              },
+                              onTap: () {
+                                // showDialog(
+                                //     context: context,
+                                //     barrierDismissible: false,
+                                //     builder: (BuildContext context) {
+                                //       return popupEditForm(
+                                //           context, suggestionList[i]);
+                                //     });
+                              },
+                            ),
                           );
                         }),
                   );
@@ -155,14 +162,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   return Container(
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     width: MediaQuery.of(context).size.width * 0.6,
-                    child: const Text("No Items to display"),
+                    child: Center(child: const Text("No Items to display")),
                   );
                 }
               } else {
                 return Container(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   width: MediaQuery.of(context).size.width * 0.6,
-                  child: const Text("No Items to display"),
+                  child: Center(child: const Text("No Items to display")),
                 );
               }
             },
@@ -310,9 +317,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
     ));
   }
 
-  Widget popupEditForm(context, Food data) {
-    String itemName = data.itemName;
-    int totalQty = data.totalQty, price = data.price;
+  Widget popupEditForm(context, FoodModel data) {
+    String itemName = "data.itemName";
+    int totalQty = 0;
+    //data.totalQty, price = data.price;
     return AlertDialog(
         content: Stack(
       clipBehavior: Clip.none,
@@ -363,36 +371,36 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextFormField(
-                  initialValue: price.toString(),
-                  validator: (value) {
-                    if (value!.length > 3) {
-                      return "Not a valid price";
-                    } else if (int.tryParse(value) == null)
-                      return "Not a valid integer";
-                    else
-                      return null;
-                  },
-                  keyboardType: const TextInputType.numberWithOptions(),
-                  onSaved: (value) {
-                    price = int.parse(value!);
-                  },
-                  cursorColor: const Color.fromRGBO(255, 63, 111, 1),
-                  decoration: const InputDecoration(
-                    hintText: 'Price in INR',
-                    hintStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                    icon: Icon(
-                      Icons.attach_money,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                  ),
-                ),
-              ),
+              // Padding(
+              //   padding: const EdgeInsets.all(8.0),
+              //   child: TextFormField(
+              //     initialValue: price.toString(),
+              //     validator: (value) {
+              //       if (value!.length > 3) {
+              //         return "Not a valid price";
+              //       } else if (int.tryParse(value) == null)
+              //         return "Not a valid integer";
+              //       else
+              //         return null;
+              //     },
+              //     keyboardType: const TextInputType.numberWithOptions(),
+              //     onSaved: (value) {
+              //    //   price = int.parse(value!);
+              //     },
+              //     cursorColor: const Color.fromRGBO(255, 63, 111, 1),
+              //     decoration: const InputDecoration(
+              //       hintText: 'Price in INR',
+              //       hintStyle: TextStyle(
+              //         fontWeight: FontWeight.bold,
+              //         color: Color.fromRGBO(255, 63, 111, 1),
+              //       ),
+              //       icon: Icon(
+              //         Icons.attach_money,
+              //         color: Color.fromRGBO(255, 63, 111, 1),
+              //       ),
+              //     ),
+              //   ),
+              // ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextFormField(
@@ -444,7 +452,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
     ));
   }
 
-  Widget popupDeleteOrEmpty(context, Food data) {
+  Widget popupDeleteOrEmpty(context, FoodModel data) {
     return AlertDialog(
         content: Stack(
       clipBehavior: Clip.none,

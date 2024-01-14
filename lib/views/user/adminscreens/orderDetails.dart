@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:online_food_order_app/apis/foodAPIs.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
-import 'package:provider/provider.dart';
+
+import '../notifiers/cartNotifier.dart';
 
 class OrderDetailsPage extends StatefulWidget {
   final dynamic orderdata;
@@ -13,19 +16,20 @@ class OrderDetailsPage extends StatefulWidget {
 }
 
 class _OrderDetailsPageState extends State<OrderDetailsPage> {
+  AuthNotifier authNotifier = Get.put(AuthNotifier());
+  CartNotifier cartNotifier = Get.put(CartNotifier());
+
   @override
   void initState() {
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
-    getUserDetails(authNotifier);
+
+    getAdminDetails(authNotifier);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     List<dynamic> items = widget.orderdata['items'];
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Order Details'),
