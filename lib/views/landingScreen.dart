@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:online_food_order_app/apis/foodAPIs.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
-import 'package:online_food_order_app/screens/adminHome.dart';
-import 'package:online_food_order_app/screens/login.dart';
-import 'package:online_food_order_app/screens/navigationBar.dart';
-import 'package:provider/provider.dart';
-// import 'package:foodlab/api/food_api.dart';
-// import 'package:foodlab/screens/login_signup_page.dart';
-// import 'package:foodlab/notifier/auth_notifier.dart';
-// import 'package:foodlab/screens/navigation_bar.dart';
-// import 'package:provider/provider.dart';
+import 'package:online_food_order_app/views/loginScreen.dart';
+import 'package:online_food_order_app/views/userviews/navigationBar.dart';
+
+import 'adminscreens/adminHome.dart';
+
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -19,18 +17,17 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
+  AuthNotifier authNotifier = Get.put(AuthNotifier());
+
   @override
   void initState() {
-    AuthNotifier authNotifier =
-        Provider.of<AuthNotifier>(context, listen: false);
     initializeCurrentUser(authNotifier, context);
+
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    AuthNotifier authNotifier = Provider.of<AuthNotifier>(context);
-
     return Scaffold(
       body: Container(
         width: MediaQuery.of(context).size.width,
@@ -72,26 +69,24 @@ class _LandingPageState extends State<LandingPage> {
             ),
             GestureDetector(
               onTap: () {
-                (authNotifier.user == null)
-                    ? Navigator.pushReplacement(context,
-                        MaterialPageRoute(builder: (BuildContext context) {
-                        return const LoginPage();
-                      }))
-                    : (authNotifier.userDetails == null)
-                        ? print('wait')
-                        : (authNotifier.userDetails!.role == 'admin')
-                            ? Navigator.pushReplacement(context,
-                                MaterialPageRoute(
-                                builder: (BuildContext context) {
-                                  return const AdminHomePage();
-                                },
-                              ))
-                            : Navigator.pushReplacement(context,
-                                MaterialPageRoute(
-                                builder: (BuildContext context) {
-                                  return NavigationBarPage(selectedIndex: 1);
-                                },
-                              ));
+                if (authNotifier.user == null &&
+                    authNotifier.adminDetails == null) {
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (BuildContext context) {
+                    return const LoginPage();
+                  }));
+                } else if (authNotifier.adminDetails != null) {
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (BuildContext context) {
+                    return const AdminHomePage();
+                  }));
+                } else if (authNotifier.user != null) {
+                  Navigator.pushReplacement(context, MaterialPageRoute(
+                    builder: (BuildContext context) {
+                      return NavigationBarPage(selectedIndex: 1);
+                    },
+                  ));
+                }
               },
               child: Container(
                 padding:

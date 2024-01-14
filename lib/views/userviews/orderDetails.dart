@@ -4,7 +4,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:online_food_order_app/apis/foodAPIs.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
 
-import '../notifiers/cartNotifier.dart';
+import '../../../notifiers/cartNotifier.dart';
 
 class OrderDetailsPage extends StatefulWidget {
   final dynamic orderdata;

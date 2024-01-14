@@ -1,4 +1,4 @@
-package com.example.online_food_order_app
+package com.example.canteexpress
 
 import io.flutter.embedding.android.FlutterActivity
 

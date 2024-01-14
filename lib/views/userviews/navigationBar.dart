@@ -1,8 +1,9 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:online_food_order_app/screens/cartPage.dart';
-import 'package:online_food_order_app/screens/homePage.dart';
-import 'package:online_food_order_app/screens/profilePage.dart';
+import 'package:online_food_order_app/views/userviews/profilePage.dart';
+
+import 'homePage.dart';
+import 'cartPage.dart';
 
 // ignore: must_be_immutable
 class NavigationBarPage extends StatefulWidget {

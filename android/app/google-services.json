@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "19600582432",
+    "project_id": "canteexpress",
+    "storage_bucket": "canteexpress.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:19600582432:android:e34d8188cdff6424605945",
+        "android_client_info": {
+          "package_name": "com.example.canteexpress"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "19600582432-h04b987m8fh8ut9p87l5deb4reb6drj9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.canteexpress",
+            "certificate_hash": "b09aa2d6184fcad90be744e15ec32d4127a72b0d"
+          }
+        },
+        {
+          "client_id": "19600582432-cs281j4k3f1bp13krp0c8ei3tm5ah90q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCw4Q4DSIiqJPrkaYORUbg-AOXYlT79E-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "19600582432-cs281j4k3f1bp13krp0c8ei3tm5ah90q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

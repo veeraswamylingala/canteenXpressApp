@@ -4,13 +4,14 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:online_food_order_app/apis/foodAPIs.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
-import 'package:online_food_order_app/screens/orderDetails.dart';
+
 import 'package:online_food_order_app/widgets/customRaisedButton.dart';
 import 'package:flutter/services.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
-import '../userviews/loginScreen.dart';
+import 'orderDetails.dart';
+import '../loginScreen.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});

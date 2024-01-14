@@ -5,9 +5,10 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:online_food_order_app/apis/foodAPIs.dart';
 import 'package:online_food_order_app/models/food.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
+import 'package:online_food_order_app/views/adminscreens/itemForm.dart';
 import 'package:online_food_order_app/widgets/customRaisedButton.dart';
-import '../notifiers/cartNotifier.dart';
-import '../userviews/loginScreen.dart';
+import '../../../notifiers/cartNotifier.dart';
+import '../loginScreen.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -47,10 +48,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
             ),
             onPressed: () {
               signOutUser();
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (BuildContext context) {
-                return const LoginPage();
-              }));
             },
           )
         ],
@@ -67,13 +64,16 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (BuildContext context) {
-                return popupForm(context);
-              });
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => ItemForm()));
+          // showDialog(
+          //     context: context,
+          //     barrierDismissible: false,
+          //     builder: (BuildContext context) {
+          //       return createNewFoodItem(context);
+          //     });
         },
+        foregroundColor: Colors.white,
         backgroundColor: const Color.fromRGBO(255, 63, 111, 1),
         child: const Icon(Icons.add),
       ),
@@ -118,6 +118,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                         itemCount: _foodItems.length,
                         itemBuilder: (context, int i) {
                           return Card(
+                            elevation: 10.0,
                             child: ListTile(
                               leading: SizedBox(
                                 width: 50,
@@ -128,7 +129,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                   c,
                                 ) {
                                   return Icon(
-                                      Icons.emoji_food_beverage_rounded);
+                                      Icons.fastfood);
                                 }),
                               ),
                               title: Text(_foodItems[i].name ?? ''),
@@ -136,23 +137,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                   'cost: ${_foodItems[i].price.toString()}'),
                               trailing:
                                   Text('${_foodItems[i].category.toString()}'),
-                              onLongPress: () {
-                                // showDialog(
-                                //     context: context,
-                                //     barrierDismissible: false,
-                                //     builder: (BuildContext context) {
-                                //       return popupDeleteOrEmpty(
-                                //           context, suggestionList[i]);
-                                //     });
-                              },
+
                               onTap: () {
-                                // showDialog(
-                                //     context: context,
-                                //     barrierDismissible: false,
-                                //     builder: (BuildContext context) {
-                                //       return popupEditForm(
-                                //           context, suggestionList[i]);
-                                //     });
+                                Navigator.push(
+                                    context, MaterialPageRoute(builder: (context) => ItemForm(foodModel: _foodItems[i],)));
                               },
                             ),
                           );
@@ -179,7 +167,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
   }
 
-  Widget popupForm(context) {
+  Widget createNewFoodItem(context) {
     String itemName = "";
     int totalQty = 0;
     int price = 0;
@@ -204,112 +192,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextFormField(
-                  validator: (value) {
-                    if (value!.length < 3) {
-                      return "Not a valid name";
-                    } else {
-                      return null;
-                    }
-                  },
-                  keyboardType: TextInputType.text,
-                  onSaved: (value) {
-                    itemName = value ?? "";
-                  },
-                  cursorColor: const Color.fromRGBO(255, 63, 111, 1),
-                  decoration: const InputDecoration(
-                    hintText: 'Food Name',
-                    hintStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                    icon: Icon(
-                      Icons.fastfood,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextFormField(
-                  validator: (value) {
-                    if (value!.length > 3) {
-                      return "Not a valid price";
-                    } else if (int.tryParse(value) == null)
-                      return "Not a valid integer";
-                    else
-                      return null;
-                  },
-                  keyboardType: const TextInputType.numberWithOptions(),
-                  onSaved: (value) {
-                    if (value != null) {
-                      price = int.parse(value);
-                    }
-                  },
-                  cursorColor: const Color.fromRGBO(255, 63, 111, 1),
-                  decoration: const InputDecoration(
-                    hintText: 'Price in INR',
-                    hintStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                    icon: Icon(
-                      Icons.attach_money,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextFormField(
-                  validator: (value) {
-                    if (value!.length > 4) {
-                      return "QTY cannot be above 4 digits";
-                    } else if (int.tryParse(value) == null)
-                      return "Not a valid integer";
-                    else
-                      return null;
-                  },
-                  keyboardType: const TextInputType.numberWithOptions(),
-                  onSaved: (value) {
-                    if (value != null) {
-                      totalQty = int.parse(value);
-                    }
-                  },
-                  cursorColor: const Color.fromRGBO(255, 63, 111, 1),
-                  decoration: const InputDecoration(
-                    hintText: 'Total QTY',
-                    hintStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                    icon: Icon(
-                      Icons.add_shopping_cart,
-                      color: Color.fromRGBO(255, 63, 111, 1),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: GestureDetector(
-                  onTap: () {
-                    if (_formKey.currentState!.validate()) {
-                      _formKey.currentState!.save();
-                      // addNewItem(
-                      //     itemName: itemName,
-                      //     price: price,
-                      //     totalQty: totalQty,
-                      //     context: context);
-                    }
-                  },
-                  child: const CustomRaisedButton(buttonText: 'Add Item'),
-                ),
-              ),
+
             ],
           ),
         ),

@@ -1,13 +1,23 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:online_food_order_app/models/user.dart';
 import 'package:online_food_order_app/notifiers/authNotifier.dart';
-import 'package:online_food_order_app/screens/adminHome.dart';
-import 'package:online_food_order_app/screens/navigationBar.dart';
+
 import 'package:progress_dialog_null_safe/progress_dialog_null_safe.dart';
+
+import '../models/food.dart';
+
+import '../views/adminscreens/adminHome.dart';
+import '../views/loginScreen.dart';
 
 ProgressDialog? pr;
 
@@ -18,6 +28,35 @@ void toast(String data) {
       gravity: ToastGravity.BOTTOM,
       backgroundColor: Colors.grey,
       textColor: Colors.white);
+}
+
+Future<bool> signInWithGoogle(
+    {required AuthNotifier authNotifier, required BuildContext context}) async {
+  // Trigger the authentication flow
+  final GoogleSignInAccount? googleUser =
+      await GoogleSignIn().signIn().catchError((e) {
+    log("Error");
+    toast(e.toString());
+  });
+
+  // Obtain the auth details from the request
+  final GoogleSignInAuthentication? googleAuth =
+      await googleUser?.authentication;
+
+  // Create a new credential
+  final credential = GoogleAuthProvider.credential(
+    accessToken: googleAuth?.accessToken,
+    idToken: googleAuth?.idToken,
+  );
+
+  // Once signed in, return the UserCredential
+  UserCredential userCredential =
+      await FirebaseAuth.instance.signInWithCredential(credential);
+  log(userCredential.user.toString());
+  if (userCredential.user != null) {
+    authNotifier.setUser(userCredential.user!);
+  }
+  return true;
 }
 
 login(UserModel user, AuthNotifier authNotifier, BuildContext context) async {
@@ -39,36 +78,29 @@ login(UserModel user, AuthNotifier authNotifier, BuildContext context) async {
 
   try {
     User? firebaseUser = authResult.user;
-    if (!firebaseUser!.isAnonymous) {
-      await FirebaseAuth.instance.signOut();
+    // if (!firebaseUser!.isAnonymous) {
+    //   await FirebaseAuth.instance.signOut();
+    //   pr!.hide().then((isHidden) {
+    //     print(isHidden);
+    //   });
+    //   toast("Email ID not verified");
+    //   return;
+    // } else {
+    //   print("Log In: $firebaseUser");
+    // }
+    if (firebaseUser != null) {
+      authNotifier.setUser(firebaseUser);
+      await getAdminDetails(authNotifier);
+      print("done");
       pr!.hide().then((isHidden) {
         print(isHidden);
       });
-      toast("Email ID not verified");
-      return;
-    } else {
-      print("Log In: $firebaseUser");
-    }
-    authNotifier.setUser(firebaseUser);
-    await getUserDetails(authNotifier);
-    print("done");
-    pr!.hide().then((isHidden) {
-      print(isHidden);
-    });
-    if (authNotifier.userDetails!.role == 'admin') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (BuildContext context) {
+      if (authNotifier.adminDetails!.role == 'admin') {
+        Navigator.pushAndRemoveUntil(context,
+            MaterialPageRoute(builder: (BuildContext context) {
           return const AdminHomePage();
-        }),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (BuildContext context) {
-          return NavigationBarPage(selectedIndex: 1);
-        }),
-      );
+        }), (Route<dynamic> route) => false);
+      }
     }
   } catch (error) {
     pr!.hide().then((isHidden) {
@@ -80,56 +112,52 @@ login(UserModel user, AuthNotifier authNotifier, BuildContext context) async {
   }
 }
 
-// signUp(UserModel user, AuthNotifier authNotifier, BuildContext context) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
-//   pr!.show();
-//   bool userDataUploaded = false;
-//   UserCredential authResult;
-//   try {
-//     authResult = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-//         email: user.email!.trim(), password: user.password ?? "");
-//   } catch (error) {
-//     pr!.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast(error.toString());
-//     print(error);
-//     return;
-//   }
+signUp(UserModel user, AuthNotifier authNotifier, BuildContext context) async {
+  pr = ProgressDialog(context,
+      type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
+  pr!.show();
+  bool userDataUploaded = false;
+  UserCredential authResult;
+  try {
+    authResult = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: user.email!.trim(), password: user.password ?? "");
+  } catch (error) {
+    pr!.hide().then((isHidden) {
+      print(isHidden);
+    });
+    toast(error.toString());
+    print(error);
+    return;
+  }
 
-//   try {
-//     UserUpdateInfo updateInfo = UserUpdateInfo();
-//     updateInfo.displayName = user.displayName;
+  try {
+    User? firebaseUser = authResult.user;
+    await firebaseUser?.sendEmailVerification();
+    await firebaseUser!.updateDisplayName(user.displayName);
+    await firebaseUser.updateEmail(user.email ?? "");
+    await firebaseUser.reload();
+    print("Sign Up: $firebaseUser");
+    uploadUserData(user, userDataUploaded);
+    await FirebaseAuth.instance.signOut();
+    pr!.hide().then((isHidden) {
+      print(isHidden);
+    });
+    toast("Verification link is sent to ${user.email}");
+    Navigator.pop(context);
+    pr!.hide().then((isHidden) {
+      print(isHidden);
+    });
+  } catch (error) {
+    pr!.hide().then((isHidden) {
+      print(isHidden);
+    });
+    toast(error.toString());
+    print(error);
+    return;
+  }
+}
 
-//     User? firebaseUser = authResult.user;
-//     await firebaseUser?.sendEmailVerification();
-
-//     await firebaseUser.updateProfile(updateInfo);
-//     await firebaseUser.reload();
-//     print("Sign Up: $firebaseUser");
-//     uploadUserData(user, userDataUploaded);
-//     await FirebaseAuth.instance.signOut();
-//     authNotifier.setUser(null);
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Verification link is sent to ${user.email}");
-//     Navigator.pop(context);
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast(error.message.toString());
-//     print(error);
-//     return;
-//   }
-// }
-
-getUserDetails(AuthNotifier authNotifier) async {
+getAdminDetails(AuthNotifier authNotifier) async {
   await FirebaseFirestore.instance
       .collection('users')
       .doc(authNotifier.user!.uid)
@@ -142,291 +170,98 @@ getUserDetails(AuthNotifier authNotifier) async {
           });
 }
 
-// uploadUserData(User user, bool userdataUpload) async {
-//   bool userDataUploadVar = userdataUpload;
-//   FirebaseUser currentUser = await FirebaseAuth.instance.currentUser();
-
-//   CollectionReference userRef = Firestore.instance.collection('users');
-//   CollectionReference cartRef = Firestore.instance.collection('carts');
-
-//   user.uuid = currentUser.uid;
-//   if (userDataUploadVar != true) {
-//     await userRef
-//         .document(currentUser.uid)
-//         .setData(user.toMap())
-//         .catchError((e) => print(e))
-//         .then((value) => userDataUploadVar = true);
-//     await cartRef
-//         .document(currentUser.uid)
-//         .setData({})
-//         .catchError((e) => print(e))
-//         .then((value) => userDataUploadVar = true);
-//   } else {
-//     print('already uploaded user data');
-//   }
-//   print('user data uploaded successfully');
+// getItemsDetails(AuthNotifier authNotifier) async {
+//   await FirebaseFirestore.instance
+//       .collection('Menu')
+//       .doc(authNotifier.user!.uid)
+//       .get()
+//       .catchError((e) => print(e))
+//       .then((value) => {
+//     (value != null)
+//         ? authNotifier.setUserDetails(UserModel.fromMap(value.data()!))
+//         : print(value)
+//   });
 // }
+
+uploadUserData(UserModel user, bool userdataUpload) async {
+  bool userDataUploadVar = userdataUpload;
+  User? currentUser = await FirebaseAuth.instance.currentUser;
+
+  CollectionReference userRef = FirebaseFirestore.instance.collection('users');
+  CollectionReference cartRef = FirebaseFirestore.instance.collection('carts');
+
+  user.uuid = currentUser!.uid;
+  if (userDataUploadVar != true) {
+    await userRef
+        .doc(currentUser!.uid)
+        .set(user.toMap())
+        .catchError((e) => print(e))
+        .then((value) => userDataUploadVar = true);
+  } else {
+    print('already uploaded user data');
+  }
+  print('user data uploaded successfully');
+}
 
 initializeCurrentUser(AuthNotifier authNotifier, BuildContext context) async {
   User? firebaseUser = FirebaseAuth.instance.currentUser;
-  authNotifier.setUser(firebaseUser!);
-  await getUserDetails(authNotifier);
+  print(firebaseUser.toString());
+  if (firebaseUser != null) {
+    authNotifier.setUser(firebaseUser);
+    //Identify this user is admin or not
+    await getAdminDetails(authNotifier);
+  }
 }
 
-// signOut(AuthNotifier authNotifier, BuildContext context) async {
-//   await FirebaseAuth.instance.signOut();
+signOut(AuthNotifier authNotifier, BuildContext context) async {
+  await FirebaseAuth.instance.signOut();
+  authNotifier.setUser(null);
+  authNotifier.setUserDetails(null);
 
-//   authNotifier.setUser(null);
-//   print('log out');
-//   Navigator.pushReplacement(
-//     context,
-//     MaterialPageRoute(builder: (BuildContext context) {
-//       return LoginPage();
-//     }),
-//   );
-// }
+  print('log out');
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (BuildContext context) {
+      return const LoginPage();
+    }),
+  );
+}
 
-// forgotPassword(
-//     User user, AuthNotifier authNotifier, BuildContext context) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email);
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast(error.message.toString());
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   toast("Reset Email has sent successfully");
-//   Navigator.pop(context);
-// }
+Future addNewItem(
+    {required FoodModel foodModel, required BuildContext context}) async {
+  try {
+    CollectionReference itemRef =
+        FirebaseFirestore.instance.collection('menu_items');
+    await itemRef
+        .doc(foodModel.id)
+        .set(foodModel.toJson())
+        .catchError((e) => print(e))
+        .then((value) => print("Success"));
+  } catch (error) {
+    toast("Failed to add to new item!");
+    print(error);
+    return;
+  }
+  toast("New Item added successfully!");
+}
 
-// addToCart(Food food, BuildContext context) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     FirebaseUser currentUser = await FirebaseAuth.instance.currentUser();
-//     CollectionReference cartRef = Firestore.instance.collection('carts');
-//     QuerySnapshot data = await cartRef
-//         .document(currentUser.uid)
-//         .collection('items')
-//         .getDocuments();
-//     if (data.documents.length >= 10) {
-//       pr.hide().then((isHidden) {
-//         print(isHidden);
-//       });
-//       toast("Cart cannot have more than 10 times!");
-//       return;
-//     }
-//     await cartRef
-//         .document(currentUser.uid)
-//         .collection('items')
-//         .document(food.id)
-//         .setData({"count": 1})
-//         .catchError((e) => print(e))
-//         .then((value) => print("Success"));
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Failed to add to cart!");
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   toast("Added to cart successfully!");
-// }
+Future deleteItem(String id, BuildContext context) async {
 
-// removeFromCart(Food food, BuildContext context) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     FirebaseUser currentUser = await FirebaseAuth.instance.currentUser();
-//     CollectionReference cartRef = Firestore.instance.collection('carts');
-//     await cartRef
-//         .document(currentUser.uid)
-//         .collection('items')
-//         .document(food.id)
-//         .delete()
-//         .catchError((e) => print(e))
-//         .then((value) => print("Success"));
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Failed to Remove from cart!");
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   toast("Removed from cart successfully!");
-// }
-
-// addNewItem(
-//     {required String itemName,
-//     required int price,
-//     required int totalQty,
-//     required BuildContext context}) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     CollectionReference itemRef = Firestore.instance.collection('items');
-//     await itemRef
-//         .document()
-//         .setData({"item_name": itemName, "price": price, "total_qty": totalQty})
-//         .catchError((e) => print(e))
-//         .then((value) => print("Success"));
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Failed to add to new item!");
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   Navigator.pop(context);
-//   toast("New Item added successfully!");
-// }
-
-// editItem(String itemName, int price, int totalQty, BuildContext context,
-//     String id) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     CollectionReference itemRef = Firestore.instance.collection('items');
-//     await itemRef
-//         .document(id)
-//         .setData({"item_name": itemName, "price": price, "total_qty": totalQty})
-//         .catchError((e) => print(e))
-//         .then((value) => print("Success"));
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Failed to edit item!");
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   Navigator.pop(context);
-//   toast("Item edited successfully!");
-// }
-
-// deleteItem(String id, BuildContext context) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     CollectionReference itemRef = Firestore.instance.collection('items');
-//     await itemRef
-//         .document(id)
-//         .delete()
-//         .catchError((e) => print(e))
-//         .then((value) => print("Success"));
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Failed to edit item!");
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   Navigator.pop(context);
-//   toast("Item edited successfully!");
-// }
-
-// editCartItem(String itemId, int count, BuildContext context) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     FirebaseUser currentUser = await FirebaseAuth.instance.currentUser();
-//     CollectionReference cartRef = Firestore.instance.collection('carts');
-//     if (count <= 0) {
-//       await cartRef
-//           .document(currentUser.uid)
-//           .collection('items')
-//           .document(itemId)
-//           .delete()
-//           .catchError((e) => print(e))
-//           .then((value) => print("Success"));
-//     } else {
-//       await cartRef
-//           .document(currentUser.uid)
-//           .collection('items')
-//           .document(itemId)
-//           .updateData({"count": count})
-//           .catchError((e) => print(e))
-//           .then((value) => print("Success"));
-//     }
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Failed to update Cart!");
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   toast("Cart updated successfully!");
-// }
-
-// addMoney(int amount, BuildContext context, String id) async {
-//   pr = ProgressDialog(context,
-//       type: ProgressDialogType.Normal, isDismissible: false, showLogs: false);
-//   pr.show();
-//   try {
-//     CollectionReference userRef = Firestore.instance.collection('users');
-//     await userRef
-//         .document(id)
-//         .updateData({'balance': FieldValue.increment(amount)})
-//         .catchError((e) => print(e))
-//         .then((value) => print("Success"));
-//   } catch (error) {
-//     pr.hide().then((isHidden) {
-//       print(isHidden);
-//     });
-//     toast("Failed to add money!");
-//     print(error);
-//     return;
-//   }
-//   pr.hide().then((isHidden) {
-//     print(isHidden);
-//   });
-//   Navigator.pop(context);
-//   Navigator.pushReplacement(
-//     context,
-//     MaterialPageRoute(builder: (BuildContext context) {
-//       return NavigationBarPage(selectedIndex: 1);
-//     }),
-//   );
-//   toast("Money added successfully!");
-// }
+  try {
+    CollectionReference itemRef =
+        FirebaseFirestore.instance.collection('menu_items');
+    await itemRef
+        .doc(id)
+        .delete()
+        .catchError((e) => print(e))
+        .then((value) => print("Success"));
+  } catch (error) {
+    toast("Failed to edit item!");
+    print(error);
+    return;
+  }
+  toast("Item edited successfully!");
+}
 
 // placeOrder(BuildContext context, double total) async {
 //   pr = ProgressDialog(context,
