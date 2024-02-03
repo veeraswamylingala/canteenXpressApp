@@ -3,13 +3,25 @@ import 'package:get/get.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 import 'package:get/get_state_manager/src/simple/get_state.dart';
 import 'package:get/utils.dart';
+import 'package:online_food_order_app/apis/razorpay/razorpayInegrations.dart';
 import 'package:online_food_order_app/models/food.dart';
 import 'package:online_food_order_app/notifiers/cartNotifier.dart';
 
-class CartPage extends StatelessWidget {
-  final CartNotifier cartcontroller = Get.put(CartNotifier());
+class CartPage extends StatefulWidget {
+  const CartPage({Key? key}) : super(key: key);
 
-  CartPage({Key? key}) : super(key: key);
+  @override
+  State<CartPage> createState() => _CartPageState();
+}
+
+class _CartPageState extends State<CartPage> {
+  final CartNotifier cartcontroller = Get.put(CartNotifier());
+  final RazorPayIntegration _integration = RazorPayIntegration();
+  @override
+  void initState() {
+    super.initState();
+    _integration.intiateRazorPay();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +55,7 @@ class CartPage extends StatelessWidget {
                       );
                     } else {
                       return Container(
-                          padding: EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(10),
                           child: ListView.builder(
                             itemCount: cartcontroller.cartProducts.length,
                             itemBuilder: ((context, index) {
@@ -54,7 +66,7 @@ class CartPage extends StatelessWidget {
                     }
                   }),
                 ),
-                Divider(),
+                const Divider(),
                 Container(
                     decoration: const BoxDecoration(
                         color: Colors.white,
@@ -70,7 +82,7 @@ class CartPage extends StatelessWidget {
                             title: const Text("-"),
                             leading: const Text("Price"),
                             trailing: Obx(
-                              () => Text("\$ " + totalPrice()),
+                              () => Text("\$ ${totalPrice()}"),
                             ),
                           ),
                         ),
@@ -79,22 +91,22 @@ class CartPage extends StatelessWidget {
                           child: ListTile(
                             title: Text("-"),
                             leading: Text("Discount"),
-                            trailing: Text("\$ " + "-0"),
+                            trailing: Text("\$ " "-0"),
                           ),
                         ),
                         SizedBox(
                           height: 30,
                           child: ListTile(
-                            title: Text("-"),
-                            leading: Text("Total"),
-                            trailing: Obx(() => Text("\$" + totalPrice())),
+                            title: const Text("-"),
+                            leading: const Text("Total"),
+                            trailing: Obx(() => Text("\$${totalPrice()}")),
                           ),
                         ),
                         const SizedBox(
                           height: 30,
                         ),
                         Card(
-                          elevation: 20,
+                          elevation: 10,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -123,14 +135,21 @@ class CartPage extends StatelessWidget {
                                 ),
                               ),
                               Expanded(
-                                child: Container(
-                                  color: Colors.redAccent,
-                                  child: TextButton(
-                                    onPressed: () {},
-                                    child: const Text(
-                                      "Confirm Order",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    backgroundColor:
+                                        const Color.fromRGBO(255, 63, 111, 1),
+                                  ),
+                                  onPressed: () {
+                                    print(totalPrice());
+                                    if (totalPrice() != "0.00") {
+                                      _integration.openSession(
+                                          amount: num.parse(totalPrice()));
+                                    }
+                                  },
+                                  child: const Text(
+                                    "Confirm Order",
+                                    style: TextStyle(color: Colors.white),
                                   ),
                                 ),
                               )
@@ -139,7 +158,7 @@ class CartPage extends StatelessWidget {
                         )
                       ],
                     )),
-                SizedBox(
+                const SizedBox(
                   height: 70,
                 ),
               ],
@@ -157,7 +176,7 @@ class CartPage extends StatelessWidget {
               v,
               c,
             ) {
-              return Icon(Icons.emoji_food_beverage_rounded);
+              return const Icon(Icons.emoji_food_beverage_rounded);
             }),
           ),
           title: Text(product.name.toString(),
@@ -166,12 +185,7 @@ class CartPage extends StatelessWidget {
                   letterSpacing: 1.5,
                   fontWeight: FontWeight.w600)),
           subtitle: Text(
-            product.quantity.toString() +
-                " * " +
-                product.price.toString() +
-                "=" +
-                "\$ " +
-                (product.price * product.quantity).toStringAsFixed(1),
+            "${product.quantity} * ${product.price}=\$ ${(product.price * product.quantity).toStringAsFixed(1)}",
             style: const TextStyle(
                 color: Colors.green,
                 fontSize: 12,
@@ -199,14 +213,15 @@ class CartPage extends StatelessWidget {
                       size: 16,
                     )),
                 Container(
-                    margin: EdgeInsets.symmetric(horizontal: 3),
-                    padding: EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(3),
                         color: Colors.white),
                     child: Text(
                       product.quantity.toString(),
-                      style: TextStyle(color: Colors.black, fontSize: 16),
+                      style: const TextStyle(color: Colors.black, fontSize: 16),
                     )),
                 InkWell(
                     onTap: () {
